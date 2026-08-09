@@ -1,0 +1,21 @@
+{
+  "name": "timeswap-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "TimeSwap REST API — Express + PostgreSQL (Neon/Supabase). Falls back to an in-memory/SQLite seeded store in dev mode when no DATABASE_URL is set.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "seed": "node src/seed.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.3.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
+  }
+}

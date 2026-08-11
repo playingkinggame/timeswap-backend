@@ -8,6 +8,7 @@ import userRoutes from "./routes/users.js";
 import skillRoutes from "./routes/skills.js";
 import matchRoutes from "./routes/matches.js";
 import connectionRoutes from "./routes/connections.js";
+import sessionRoutes from "./routes/sessions.js";
 
 const app = express();
 app.use(cors());
@@ -20,6 +21,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/skills", skillRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/connections", connectionRoutes);
+app.use("/api/sessions", sessionRoutes);
 
 app.use((req, res) => res.status(404).json({ error: "Not found" }));
 app.use((err, req, res, next) => {

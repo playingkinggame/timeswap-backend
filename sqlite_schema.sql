@@ -50,3 +50,30 @@ CREATE INDEX IF NOT EXISTS idx_user_skills_skill ON user_skills(skill_id);
 CREATE INDEX IF NOT EXISTS idx_availability_user ON availability(user_id);
 CREATE INDEX IF NOT EXISTS idx_connections_receiver ON connections(receiver_id);
 CREATE INDEX IF NOT EXISTS idx_connections_requester ON connections(requester_id);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  host_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title         TEXT NOT NULL,
+  location      TEXT NOT NULL,
+  session_date  TEXT NOT NULL,
+  start_time    TEXT NOT NULL,
+  end_time      TEXT NOT NULL,
+  notes         TEXT DEFAULT '',
+  created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS session_requests (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id    INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  requester_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','accepted','declined')),
+  created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(session_id, requester_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_host ON sessions(host_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(session_date);
+CREATE INDEX IF NOT EXISTS idx_session_requests_session ON session_requests(session_id);
+CREATE INDEX IF NOT EXISTS idx_session_requests_requester ON session_requests(requester_id);

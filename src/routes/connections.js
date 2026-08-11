@@ -33,10 +33,20 @@ router.post("/", requireAuth, async (req, res) => {
   if (!receiverId) return res.status(400).json({ error: "receiverId is required" });
   if (Number(receiverId) === meId) return res.status(400).json({ error: "You can't connect with yourself" });
 
-  const existing = await get(
-    `SELECT * FROM connections WHERE requester_id = $1 AND receiver_id = $2 AND (skill_id = $3 OR ($4 IS NULL AND skill_id IS NULL))`,
-    [meId, receiverId, skillId || null, skillId || null]
-  );
+  // Split into two type-safe queries instead of one query with an ambiguous
+  // "$N IS NULL" branch — Postgres can't infer a parameter's type when it's
+  // only ever compared to NULL, and throws 42P18 ("indeterminate_datatype").
+  // SQLite doesn't enforce this, so the old version worked locally but broke
+  // in production.
+  const existing = skillId
+    ? await get(
+        `SELECT * FROM connections WHERE requester_id = $1 AND receiver_id = $2 AND skill_id = $3`,
+        [meId, receiverId, skillId]
+      )
+    : await get(
+        `SELECT * FROM connections WHERE requester_id = $1 AND receiver_id = $2 AND skill_id IS NULL`,
+        [meId, receiverId]
+      );
   if (existing) return res.status(200).json({ connection: existing, already: true });
 
   const result = await run(

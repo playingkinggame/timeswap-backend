@@ -80,4 +80,16 @@ router.patch("/:id", requireAuth, async (req, res) => {
   res.json({ connection: updated });
 });
 
+/** DELETE /api/connections/:id — the requester can cancel their own still-pending request. */
+router.delete("/:id", requireAuth, async (req, res) => {
+  const meId = req.userId;
+  const conn = await get(`SELECT * FROM connections WHERE id = $1`, [req.params.id]);
+  if (!conn) return res.status(404).json({ error: "Connection not found" });
+  if (conn.requester_id !== meId) return res.status(403).json({ error: "Only the requester can cancel this" });
+  if (conn.status !== "pending") return res.status(400).json({ error: "Only a pending request can be cancelled" });
+
+  await run(`DELETE FROM connections WHERE id = $1`, [req.params.id]);
+  res.json({ ok: true });
+});
+
 export default router;

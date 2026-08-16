@@ -77,3 +77,13 @@ CREATE INDEX IF NOT EXISTS idx_sessions_host ON sessions(host_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(session_date);
 CREATE INDEX IF NOT EXISTS idx_session_requests_session ON session_requests(session_id);
 CREATE INDEX IF NOT EXISTS idx_session_requests_requester ON session_requests(requester_id);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  connection_id INTEGER NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+  sender_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body          TEXT NOT NULL,
+  created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_connection ON messages(connection_id);

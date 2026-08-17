@@ -44,30 +44,25 @@ async function loadAvailabilityMap() {
 }
 
 /**
- * GET /api/matches
- * Query params: skill (skill id, optional filter), day (0-6, optional filter)
+ * Core matching computation, reused by both GET /api/matches and the
+ * notifications summary (which just needs the count).
  *
  * Rule: candidate qualifies if (their teach ∩ my learn) OR (their learn ∩ my teach)
  * is non-empty, AND at least one availability slot overlaps on day_of_week + time.
  * Sorted by total overlapping minutes (proxy for "number of overlapping slots"), desc.
  */
-router.get("/", requireAuth, async (req, res) => {
-  const meId = req.userId;
+export async function computeMatches(meId, { skillFilter = null, dayFilter = null } = {}) {
   const skillsMap = await loadUserSkillsMap();
   const availMap = await loadAvailabilityMap();
 
   const mine = skillsMap.get(meId) || { teach: [], learn: [] };
   const myAvail = availMap.get(meId) || [];
-  const myTeachIds = new Set(mine.teach.map((s) => s.id));
   const myLearnIds = new Set(mine.learn.map((s) => s.id));
 
   const users = await all(
     `SELECT id, username, avatar_url, bio FROM users WHERE id != $1 AND onboarded = 1 AND username IS NOT NULL`,
     [meId]
   );
-
-  const skillFilter = req.query.skill ? Number(req.query.skill) : null;
-  const dayFilter = req.query.day !== undefined && req.query.day !== "" ? Number(req.query.day) : null;
 
   const results = [];
   for (const user of users) {
@@ -105,11 +100,17 @@ router.get("/", requireAuth, async (req, res) => {
   }
 
   results.sort((a, b) => b.overlapMinutes - a.overlapMinutes || b.overlapCount - a.overlapCount);
-  res.json({ matches: results });
+  return results;
+}
+
+router.get("/", requireAuth, async (req, res) => {
+  const skillFilter = req.query.skill ? Number(req.query.skill) : null;
+  const dayFilter = req.query.day !== undefined && req.query.day !== "" ? Number(req.query.day) : null;
+  const matches = await computeMatches(req.userId, { skillFilter, dayFilter });
+  res.json({ matches });
 });
 
 router.get("/:userId", requireAuth, async (req, res) => {
-  req.query.skill = req.query.skill || "";
   const targetId = Number(req.params.userId);
   const meId = req.userId;
   const skillsMap = await loadUserSkillsMap();

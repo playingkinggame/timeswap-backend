@@ -19,11 +19,48 @@ const CONN_SELECT = `
   JOIN users cu ON cu.id = c.receiver_id
 `;
 
+/**
+ * Attaches `unreadCount` to each accepted connection: messages sent by the
+ * other participant since this user's `last_read_at` for that thread.
+ * Cheap enough to compute in JS at this scale rather than a correlated
+ * per-row subquery.
+ */
+export async function attachUnreadCounts(connections, meId) {
+  const acceptedIds = connections.filter((c) => c.status === "accepted").map((c) => c.id);
+  if (acceptedIds.length === 0) return connections.map((c) => ({ ...c, unreadCount: 0 }));
+
+  const idPlaceholders = acceptedIds.map((_, i) => `$${i + 1}`).join(",");
+  const reads = await all(
+    `SELECT connection_id, last_read_at FROM message_reads WHERE user_id = $${acceptedIds.length + 1} AND connection_id IN (${idPlaceholders})`,
+    [...acceptedIds, meId]
+  );
+  const readMap = new Map(reads.map((r) => [r.connection_id, new Date(r.last_read_at).getTime()]));
+
+  const messages = await all(
+    `SELECT connection_id, sender_id, created_at FROM messages WHERE connection_id IN (${idPlaceholders})`,
+    acceptedIds
+  );
+
+  const counts = new Map();
+  for (const m of messages) {
+    if (m.sender_id === meId) continue;
+    const lastRead = readMap.get(m.connection_id) || 0;
+    if (new Date(m.created_at).getTime() > lastRead) {
+      counts.set(m.connection_id, (counts.get(m.connection_id) || 0) + 1);
+    }
+  }
+
+  return connections.map((c) => ({ ...c, unreadCount: counts.get(c.id) || 0 }));
+}
+
 router.get("/", requireAuth, async (req, res) => {
   const meId = req.userId;
   const sent = await all(`${CONN_SELECT} WHERE c.requester_id = $1 ORDER BY c.created_at DESC`, [meId]);
   const received = await all(`${CONN_SELECT} WHERE c.receiver_id = $1 ORDER BY c.created_at DESC`, [meId]);
-  res.json({ sent, received });
+  res.json({
+    sent: await attachUnreadCounts(sent, meId),
+    received: await attachUnreadCounts(received, meId),
+  });
 });
 
 /** POST /api/connections  { receiverId, skillId } */

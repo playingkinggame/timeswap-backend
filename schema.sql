@@ -100,3 +100,12 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_connection ON messages(connection_id);
+
+-- Tracks the last time each participant opened a connection's chat, so we
+-- can compute unread counts without a per-message read flag.
+CREATE TABLE IF NOT EXISTS message_reads (
+  connection_id INTEGER NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_read_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (connection_id, user_id)
+);

@@ -87,3 +87,10 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_connection ON messages(connection_id);
+
+CREATE TABLE IF NOT EXISTS message_reads (
+  connection_id INTEGER NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_read_at  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (connection_id, user_id)
+);

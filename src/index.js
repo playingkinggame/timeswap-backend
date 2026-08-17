@@ -11,6 +11,7 @@ import matchRoutes from "./routes/matches.js";
 import connectionRoutes from "./routes/connections.js";
 import sessionRoutes from "./routes/sessions.js";
 import messageRoutes from "./routes/messages.js";
+import notificationRoutes from "./routes/notifications.js";
 
 const app = express();
 app.use(cors());
@@ -25,6 +26,7 @@ app.use("/api/matches", matchRoutes);
 app.use("/api/connections", connectionRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/connections", messageRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use((req, res) => res.status(404).json({ error: "Not found" }));
 app.use((err, req, res, next) => {

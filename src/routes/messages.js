@@ -16,7 +16,16 @@ async function loadParticipantConnection(connectionId, meId) {
   return { conn };
 }
 
-/** GET /api/connections/:id/messages */
+/** Marks every message in this connection as read for the given user, right now. */
+async function markRead(connectionId, userId) {
+  await run(
+    `INSERT INTO message_reads (connection_id, user_id, last_read_at) VALUES ($1,$2,CURRENT_TIMESTAMP)
+     ON CONFLICT (connection_id, user_id) DO UPDATE SET last_read_at = CURRENT_TIMESTAMP`,
+    [connectionId, userId]
+  );
+}
+
+/** GET /api/connections/:id/messages — also marks the thread as read for the caller. */
 router.get("/:id/messages", requireAuth, async (req, res) => {
   const { conn, error } = await loadParticipantConnection(req.params.id, req.userId);
   if (error) return res.status(error[0]).json({ error: error[1] });
@@ -28,6 +37,7 @@ router.get("/:id/messages", requireAuth, async (req, res) => {
      ORDER BY m.created_at ASC`,
     [conn.id]
   );
+  await markRead(conn.id, req.userId);
   res.json({ messages });
 });
 
@@ -45,6 +55,9 @@ router.post("/:id/messages", requireAuth, async (req, res) => {
   );
   let message = result.rows[0];
   if (!message) message = await get(`SELECT * FROM messages WHERE id = $1`, [result.lastID]);
+
+  // Sending a message also counts as having read everything up to now.
+  await markRead(conn.id, req.userId);
 
   const withUser = await get(
     `SELECT m.id, m.body, m.created_at, m.sender_id, u.username, u.avatar_url
